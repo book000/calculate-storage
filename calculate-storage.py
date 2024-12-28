@@ -1,3 +1,4 @@
+import datetime
 import re
 import sys
 import os
@@ -23,14 +24,17 @@ class GitHubIssue:
   def update_storage_row(self, computer_name, drive, usage):
     # self.storage_rows から computer_name と drive が一致する行を取得する
     # その行の checkmark、used、size を更新する
-
-    used_size = self.__get_human_readable_size(usage.used)
+    used_size = self.get_human_readable_size(usage.used)
     used_percent = usage.percent
-    total_size = self.__get_human_readable_size(usage.total)
+    total_size = self.get_human_readable_size(usage.total)
+
+    checkmark = "🔴" if used_percent > 90 else "✅"
+
+    print(f"{checkmark} {drive}: {used_size} / {total_size} ({used_percent}%)")
 
     for storage_row in self.storage_rows:
       if storage_row["computer_name"] == computer_name and storage_row["drive"] == drive:
-        storage_row["markdown"]["checkmark"] = "🔴" if used_percent > 90 else "✅"
+        storage_row["markdown"]["checkmark"] = checkmark
         storage_row["markdown"]["used"] = f"{used_size} ({used_percent}%)"
         storage_row["markdown"]["size"] = total_size
         storage_row["markdown"]["raw"] = f"| {storage_row['markdown']['checkmark']} | {storage_row['markdown']['computer_name']} | {storage_row['markdown']['drive']} | {storage_row['markdown']['used']} | {storage_row['markdown']['size']} ({storage_row['markdown']['drive_type']}) |"
@@ -134,7 +138,7 @@ class GitHubIssue:
 
     return storage_rows
 
-  def __get_human_readable_size(self, size):
+  def get_human_readable_size(self, size):
     units = ['B', 'KB', 'MB', 'GB', 'TB']
     unit = 0
     while size >= 1024:
@@ -164,6 +168,13 @@ def get_github_token():
   with open("data/github_token.txt", "r", encoding="utf-8") as f:
     return f.read().strip()
 
+def save_results(hostname, results):
+  date = datetime.datetime.now().strftime('%Y%m%d')
+  path = f"results/{hostname}_{date}.txt"
+  with open(path, "w", encoding="utf-8") as f:
+    for result in results:
+      f.write(result + "\n")
+
 def main():
   repo_name = "book000/book000"
   if os.environ.get("GITHUB_REPOSITORY") is not None:
@@ -189,13 +200,25 @@ def main():
     print(f"No drives found ({hostname})")
     return
 
+  results = []
   for drive in drives:
     usage = psutil.disk_usage(drive)
-    print(f"{drive}: {usage}")
 
     update_result = github_issue.update_storage_row(hostname, drive, usage)
     if not update_result:
       print(f"Failed to update {drive}")
+
+    results.append({
+      "drive": drive,
+      "used": usage.used,
+      "total": usage.total,
+      "percent": usage.percent,
+      "used_size": github_issue.get_human_readable_size(usage.used),
+      "total_size": github_issue.get_human_readable_size(usage.total),
+      "update_result": update_result
+    })
+
+  save_results(hostname, results)
 
   print("Update issue body")
   github_issue.update_issue_body()

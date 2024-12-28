@@ -1,9 +1,3 @@
-# root check
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-  Write-Host "Please run as Administrator"
-  exit 1
-}
-
 # Required: git, python3, python3-venv
 function Test-Command {
   param (
