@@ -17,7 +17,6 @@ function Test-Command {
 
 Test-Command git
 Test-Command python3
-Test-Command python3-venv
 
 # docker command exists
 if (Get-Command docker -ErrorAction SilentlyContinue) {

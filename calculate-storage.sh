@@ -28,7 +28,6 @@ function check_command() {
 
 check_command git
 check_command python3
-check_command python3-venv
 
 # docker command exists
 if type docker >/dev/null 2>&1; then
