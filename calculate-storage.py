@@ -194,7 +194,7 @@ def main():
     usage = psutil.disk_usage(drive)
     print(f"{drive}: {usage}")
 
-    update_result = github_issue.update_storage_row("ICHIGO", drive, usage)
+    update_result = github_issue.update_storage_row(hostname, drive, usage)
     if not update_result:
       print(f"Failed to update {drive}")
 
