@@ -44,4 +44,4 @@ if (-not (Test-Path "$projectPath\venv")) {
 
 .\venv\Scripts\pip install -r requirements.txt
 
-.\venv\Scripts\python calculate-storage.py
+.\venv\Scripts\python calculate-storage.py $env:ISSUE_NUMBER
