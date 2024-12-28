@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eu
 
 # root check
 if [ "$(id -u)" -ne 0 ]; then

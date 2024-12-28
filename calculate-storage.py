@@ -3,7 +3,6 @@ import sys
 import os
 import psutil
 import requests
-from pprint import pprint
 
 class GitHubIssue:
   body = None
@@ -197,9 +196,6 @@ def main():
     update_result = github_issue.update_storage_row(hostname, drive, usage)
     if not update_result:
       print(f"Failed to update {drive}")
-
-  print("Updated storage rows")
-  pprint(github_issue.storage_rows)
 
   print("Update issue body")
   github_issue.update_issue_body()
