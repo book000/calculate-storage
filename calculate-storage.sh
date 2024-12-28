@@ -36,9 +36,9 @@ if type docker >/dev/null 2>&1; then
   docker system prune -a -f
 fi
 
-mkdir /opt/calculate-storage
+mkdir -p /opt/calculate-storage
 chmod 777 /opt/calculate-storage
-cd /opt/calculate-storage || exit
+cd /opt/calculate-storage || exit 1
 
 # clone repository
 if [ ! -d /opt/calculate-storage/.git ]; then

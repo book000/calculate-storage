@@ -20,8 +20,8 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
 $userFolder = [System.Environment]::GetFolderPath('UserProfile')
 $projectPath = Join-Path $userFolder "calculate-storage"
 
-New-Item -ItemType Directory -Force -Path $projectPath
-Set-Location -Path $projectPath
+New-Item -ItemType Directory -Force -Path $projectPath | Out-Null
+Set-Location -Path $projectPath -ErrorAction Stop
 
 # clone repository
 if (-not (Test-Path "$projectPath\.git")) {
