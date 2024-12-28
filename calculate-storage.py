@@ -171,6 +171,9 @@ def get_github_token():
 def save_results(hostname, results):
   date = datetime.datetime.now().strftime('%Y%m%d')
   path = f"results/{hostname}_{date}.txt"
+  if not os.path.exists("results"):
+    os.makedirs("results")
+
   with open(path, "w", encoding="utf-8") as f:
     for result in results:
       f.write(result + "\n")
