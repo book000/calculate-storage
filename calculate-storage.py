@@ -34,7 +34,7 @@ class GitHubIssue:
         storage_row["markdown"]["checkmark"] = "🔴" if used_percent > 90 else "✅"
         storage_row["markdown"]["used"] = f"{used_size} ({used_percent}%)"
         storage_row["markdown"]["size"] = total_size
-        storage_row["markdown"]["raw"] = f"| {storage_row['markdown']['checkmark']} | {storage_row['markdown']['computer_name']} | {storage_row['markdown']['drive']} | {storage_row['markdown']['used']} | {storage_row['markdown']['size']} | {storage_row['markdown']['drive_type']} |"
+        storage_row["markdown"]["raw"] = f"| {storage_row['markdown']['checkmark']} | {storage_row['markdown']['computer_name']} | {storage_row['markdown']['drive']} | {storage_row['markdown']['used']} | {storage_row['markdown']['size']} ({storage_row['markdown']['drive_type']}) |"
 
         return True
 
