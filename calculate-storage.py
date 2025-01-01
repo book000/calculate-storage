@@ -176,7 +176,7 @@ def save_results(hostname, results):
 
   with open(path, "w", encoding="utf-8") as f:
     for result in results:
-      f.write(result + "\n")
+      f.write(f"{result['drive']} {result['used_size']} / {result['total_size']} ({result['percent']}%)\n")
 
 def main():
   repo_name = "book000/book000"
