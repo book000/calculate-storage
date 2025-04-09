@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 import calculate_storage
 import os
 import psutil
+import platform
 
 class TestCalculateStorage(unittest.TestCase):
     @patch('calculate_storage.requests.get')
@@ -173,6 +174,12 @@ class TestCalculateStorage(unittest.TestCase):
         self.assertEqual(token, "test_token")
         mock_open.assert_called_once_with(os.path.expanduser("data/github_token.txt"), "r", encoding="utf-8")
 
+    @patch('os.path.exists', return_value=False)
+    def test_get_github_token_file_not_exists(self, mock_exists):
+        with self.assertRaises(Exception) as context:
+            calculate_storage.get_github_token()
+        self.assertIn("Please create data/github_token.txt", str(context.exception))
+
     @patch('builtins.open', new_callable=unittest.mock.mock_open)
     def test_save_results(self, mock_open):
         calculate_storage.save_results("test_host", [{"key": "value"}])
@@ -202,6 +209,31 @@ class TestCalculateStorage(unittest.TestCase):
 
                     calculate_storage.main()
                     mock_issue_instance.update_storage_row.assert_not_called()
+
+    @patch('calculate_storage.os.name', 'nt')
+    @patch('calculate_storage.os.environ', {'COMPUTERNAME': 'TEST_WINDOWS'})
+    def test_get_real_hostname_windows(self):
+        hostname = calculate_storage.get_real_hostname()
+        self.assertEqual(hostname, 'TEST_WINDOWS')
+    
+    @patch('calculate_storage.os.name', 'posix')
+    @patch('calculate_storage.os')
+    def test_get_real_hostname_unix(self, mock_os):
+        mock_os.uname.return_value = ('Linux', 'TEST_UNIX', '5.10.0', '#1 SMP', 'x86_64')
+        hostname = calculate_storage.get_real_hostname()
+        self.assertEqual(hostname, 'TEST_UNIX')
+
+    def test_get_storage_rows_malformed_line(self):
+        with patch.object(calculate_storage.GitHubIssue, '_GitHubIssue__get_issue_body', return_value="Malformed line | with | incorrect | format <!-- calculate-storage#test_computer#C -->"):
+            issue = calculate_storage.GitHubIssue("test_repo", 1, "test_token")
+            # The malformed line should be skipped, resulting in an empty storage_rows
+            self.assertEqual(len(issue.storage_rows), 0)
+
+    def test_get_storage_rows_invalid_size_format(self):
+        with patch.object(calculate_storage.GitHubIssue, '_GitHubIssue__get_issue_body', return_value="| ✅ | test_computer | C | 50% | Invalid Size Format | <!-- calculate-storage#test_computer#C -->"):
+            issue = calculate_storage.GitHubIssue("test_repo", 1, "test_token")
+            # The line with invalid size format should be skipped
+            self.assertEqual(len(issue.storage_rows), 0)
 
 if __name__ == "__main__":
     unittest.main()
