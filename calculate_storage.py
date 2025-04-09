@@ -177,7 +177,8 @@ def save_results(hostname, results):
   date = datetime.datetime.now().strftime('%Y%m%d')
   path = f"results/{hostname}_{date}.txt"
   try:
-    os.makedirs("results", exist_ok=True)
+    if not os.path.exists("results"):
+      os.makedirs("results")
   except OSError as e:
     logging.error(f"Failed to create results directory: {e}")
     raise

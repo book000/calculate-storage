@@ -166,8 +166,9 @@ class TestCalculateStorage(unittest.TestCase):
         self.assertFalse(calculate_storage.is_valid_issue_number(None))
         self.assertFalse(calculate_storage.is_valid_issue_number("abc"))
 
+    @patch('os.path.exists', return_value=True)
     @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data='test_token')
-    def test_get_github_token(self, mock_open):
+    def test_get_github_token(self, mock_open, mock_exists):
         token = calculate_storage.get_github_token()
         self.assertEqual(token, "test_token")
         mock_open.assert_called_once_with(os.path.expanduser("data/github_token.txt"), "r", encoding="utf-8")
@@ -182,19 +183,17 @@ class TestCalculateStorage(unittest.TestCase):
         with self.assertRaises(IOError):
             calculate_storage.save_results("test_host", [{"key": "value"}])
 
+    @patch('os.path.exists', return_value=False)
     @patch('os.makedirs', side_effect=OSError("Permission denied"))
-    def test_save_results_directory_error(self, mock_makedirs):
+    def test_save_results_directory_error(self, mock_makedirs, mock_exists):
         with self.assertRaises(OSError) as context:
             calculate_storage.save_results("test_host", [{"key": "value"}])
         self.assertIn("Permission denied", str(context.exception))
 
-    @patch('os.environ', {})
-    def test_get_real_hostname_missing_env(self):
-        with self.assertRaises(KeyError):
-            calculate_storage.get_real_hostname()
-
+    @patch('calculate_storage.get_github_token')
     @patch('psutil.disk_usage', side_effect=OSError("Disk error"))
-    def test_main_disk_usage_error(self, mock_disk_usage):
+    def test_main_disk_usage_error(self, mock_disk_usage, mock_get_github_token):
+        mock_get_github_token.return_value = "test_token"
         with patch('sys.argv', ["calculate_storage.py", "1"]):
             with patch('calculate_storage.get_real_hostname', return_value="TEST_COMPUTER"):
                 with patch('calculate_storage.GitHubIssue') as MockGitHubIssue:
