@@ -37,3 +37,21 @@ jobs:
       - name: Run tests
         run: |
           python -m unittest discover -s . -p "test_*.py"
+
+  check-finished:
+    name: Check finished CI
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - test
+    permissions:
+      actions: read
+
+    steps:
+      - name: Check build failure
+        run: |
+          echo "Build status: ${{ needs.test.result }}"
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Build failed"
+            exit 1
+          fi
