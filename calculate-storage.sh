@@ -54,4 +54,4 @@ fi
 
 venv/bin/pip install -r requirements.txt
 
-venv/bin/python3 calculate-storage.py $ISSUE_NUMBER
+venv/bin/python3 calculate_storage.py $ISSUE_NUMBER

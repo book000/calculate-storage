@@ -5,6 +5,10 @@ import sys
 import os
 import psutil
 import requests
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 class GitHubIssue:
   body = None
@@ -31,7 +35,7 @@ class GitHubIssue:
 
     checkmark = "🔴" if used_percent > 90 else "✅"
 
-    print(f"{checkmark} {drive}: {used_size} / {total_size} ({used_percent}%)")
+    logging.info(f"{checkmark} {drive}: {used_size} / {total_size} ({used_percent}%)")
 
     for storage_row in self.storage_rows:
       if storage_row["computer_name"] == computer_name and storage_row["drive"] == drive:
@@ -172,8 +176,11 @@ def get_github_token():
 def save_results(hostname, results):
   date = datetime.datetime.now().strftime('%Y%m%d')
   path = f"results/{hostname}_{date}.txt"
-  if not os.path.exists("results"):
-    os.makedirs("results")
+  try:
+    os.makedirs("results", exist_ok=True)
+  except OSError as e:
+    logging.error(f"Failed to create results directory: {e}")
+    raise
 
   with open(path, "w", encoding="utf-8") as f:
     for result in results:
@@ -186,13 +193,13 @@ def main():
 
   issue_number = sys.argv[1] if len(sys.argv) > 1 else None
   if issue_number is None:
-    print("Please input issue number")
+    logging.error("Please input issue number")
     return
   if not is_valid_issue_number(issue_number):
-    print("Invalid issue number")
+    logging.error("Invalid issue number")
     return
 
-  print(f"Issue number: {issue_number}")
+  logging.info(f"Issue number: {issue_number}")
 
   github_token = get_github_token()
 
@@ -201,16 +208,20 @@ def main():
   hostname = get_real_hostname()
   drives = github_issue.get_computer_drives(hostname)
   if len(drives) == 0:
-    print(f"No drives found ({hostname})")
+    logging.warning(f"No drives found ({hostname})")
     return
 
   results = []
   for drive in drives:
-    usage = psutil.disk_usage(drive)
+    try:
+      usage = psutil.disk_usage(drive)
+    except OSError as e:
+      logging.error(f"Failed to get disk usage for {drive}: {e}")
+      continue
 
     update_result = github_issue.update_storage_row(hostname, drive, usage)
     if not update_result:
-      print(f"Failed to update {drive}")
+      logging.error(f"Failed to update {drive}")
 
     results.append({
       "drive": drive,
@@ -224,7 +235,7 @@ def main():
 
   save_results(hostname, results)
 
-  print("Update issue body")
+  logging.info("Update issue body")
   github_issue.update_issue_body()
 
 if __name__ == "__main__":
