@@ -56,9 +56,9 @@ class GitHubIssue:
     return computer_drives
 
   def update_issue_body(self):
-    # 最新のissue bodyとstorage_rowsを取得して、同時実行時の競合を防ぐ
+    # 最新のissue bodyを取得して、同時実行時の競合を防ぐ
+    # storage_rowsは既にupdate_storage_rowで更新済みなので再取得しない
     self.body = self.__get_issue_body()
-    self.storage_rows = self.__get_storage_rows()
     
     # self.storage_rows の内容を元に、issue の本文を更新する
     # <!-- calculate-storage#computer_name#drive --> というコメントを探して、その行を更新する
