@@ -47,10 +47,10 @@ class TestCalculateStorage(unittest.TestCase):
             percent=50
         )
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir}):
-                with patch('sys.argv', ["calculate_storage.py", "1"]):
-                    calculate_storage.main()
+        tmpdir = tempfile.TemporaryDirectory()
+        with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir.name}):
+            with patch('sys.argv', ["calculate_storage.py", "1"]):
+                calculate_storage.main()
 
         mock_issue_instance.update_storage_row.assert_called_once_with("TEST_COMPUTER", "C", mock_disk_usage.return_value)
         mock_issue_instance.update_issue_body.assert_called_once()
@@ -59,20 +59,22 @@ class TestCalculateStorage(unittest.TestCase):
             root_logger.removeHandler(handler)
             if hasattr(handler, "close"):
                 handler.close()
+        tmpdir.cleanup()
 
     @patch('calculate_storage.is_valid_issue_number', return_value=False)
     def test_main_invalid_issue_number(self, mock_is_valid_issue_number):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir}):
-                with patch('sys.argv', ["calculate_storage.py", "invalid"]):
-                    with self.assertLogs(level='INFO') as log:
-                        calculate_storage.main()
-                        self.assertTrue(any("Invalid issue number" in message for message in log.output))
+        tmpdir = tempfile.TemporaryDirectory()
+        with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir.name}):
+            with patch('sys.argv', ["calculate_storage.py", "invalid"]):
+                with self.assertLogs(level='INFO') as log:
+                    calculate_storage.main()
+                    self.assertTrue(any("Invalid issue number" in message for message in log.output))
         root_logger = calculate_storage.logging.getLogger()
         for handler in list(root_logger.handlers):
             root_logger.removeHandler(handler)
             if hasattr(handler, "close"):
                 handler.close()
+        tmpdir.cleanup()
 
     @patch('calculate_storage.requests.get')
     def test_get_issue_body(self, mock_get):
@@ -217,42 +219,44 @@ class TestCalculateStorage(unittest.TestCase):
         for handler in list(root_logger.handlers):
             root_logger.removeHandler(handler)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir}):
-                log_path = calculate_storage.setup_logging()
-                calculate_storage.logging.info("test log message")
-                for handler in root_logger.handlers:
-                    if hasattr(handler, "flush"):
-                        handler.flush()
+        tmpdir = tempfile.TemporaryDirectory()
+        with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir.name}):
+            log_path = calculate_storage.setup_logging()
+            calculate_storage.logging.info("test log message")
+            for handler in root_logger.handlers:
+                if hasattr(handler, "flush"):
+                    handler.flush()
 
-                self.assertTrue(os.path.exists(log_path))
-                with open(log_path, "r", encoding="utf-8") as f:
-                    contents = f.read()
-                self.assertIn("test log message", contents)
+            self.assertTrue(os.path.exists(log_path))
+            with open(log_path, "r", encoding="utf-8") as f:
+                contents = f.read()
+            self.assertIn("test log message", contents)
         for handler in list(root_logger.handlers):
             root_logger.removeHandler(handler)
             if hasattr(handler, "close"):
                 handler.close()
+        tmpdir.cleanup()
 
     @patch('calculate_storage.get_github_token')
     @patch('psutil.disk_usage', side_effect=OSError("Disk error"))
     def test_main_disk_usage_error(self, mock_disk_usage, mock_get_github_token):
         mock_get_github_token.return_value = "test_token"
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir}):
-                with patch('sys.argv', ["calculate_storage.py", "1"]):
-                    with patch('calculate_storage.get_real_hostname', return_value="TEST_COMPUTER"):
-                        with patch('calculate_storage.GitHubIssue') as MockGitHubIssue:
-                            mock_issue_instance = MockGitHubIssue.return_value
-                            mock_issue_instance.get_computer_drives.return_value = ["C"]
+        tmpdir = tempfile.TemporaryDirectory()
+        with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir.name}):
+            with patch('sys.argv', ["calculate_storage.py", "1"]):
+                with patch('calculate_storage.get_real_hostname', return_value="TEST_COMPUTER"):
+                    with patch('calculate_storage.GitHubIssue') as MockGitHubIssue:
+                        mock_issue_instance = MockGitHubIssue.return_value
+                        mock_issue_instance.get_computer_drives.return_value = ["C"]
 
-                            calculate_storage.main()
-                            mock_issue_instance.update_storage_row.assert_not_called()
+                        calculate_storage.main()
+                        mock_issue_instance.update_storage_row.assert_not_called()
         root_logger = calculate_storage.logging.getLogger()
         for handler in list(root_logger.handlers):
             root_logger.removeHandler(handler)
             if hasattr(handler, "close"):
                 handler.close()
+        tmpdir.cleanup()
 
     @patch('calculate_storage.os.name', 'nt')
     @patch('calculate_storage.os.environ', {'COMPUTERNAME': 'TEST_WINDOWS'})
