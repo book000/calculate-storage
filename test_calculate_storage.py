@@ -1,10 +1,13 @@
 import unittest
 from unittest.mock import patch, MagicMock
+from collections import namedtuple
 import calculate_storage
 import os
 import psutil
 import platform
 import tempfile
+
+DiskUsage = namedtuple("DiskUsage", "total used free percent")
 
 class TestCalculateStorage(unittest.TestCase):
   def _cleanup_logging_handlers(self):
@@ -46,7 +49,7 @@ class TestCalculateStorage(unittest.TestCase):
     mock_issue_instance.update_storage_row.return_value = True
     mock_issue_instance.get_human_readable_size.return_value = "50 GB"
 
-    mock_disk_usage.return_value = psutil._common.sdiskusage(
+    mock_disk_usage.return_value = DiskUsage(
       total=100 * 1024 * 1024 * 1024,  # 100 GB
       used=50 * 1024 * 1024 * 1024,   # 50 GB
       free=50 * 1024 * 1024 * 1024,   # 50 GB
@@ -148,7 +151,7 @@ class TestCalculateStorage(unittest.TestCase):
 
   @patch('psutil.disk_usage')
   def test_update_storage_row(self, mock_disk_usage):
-    mock_disk_usage.return_value = psutil._common.sdiskusage(total=1000000000, used=900000000, free=100000000, percent=91)
+    mock_disk_usage.return_value = DiskUsage(total=1000000000, used=900000000, free=100000000, percent=91)
     with patch.object(calculate_storage.GitHubIssue, '_GitHubIssue__get_issue_body', return_value="Mocked body"):
       issue = calculate_storage.GitHubIssue("test_repo", 1, "test_token")
       issue.storage_rows = [
