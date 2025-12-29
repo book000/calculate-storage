@@ -54,4 +54,5 @@ fi
 
 venv/bin/pip install -r requirements.txt
 
+export CALCULATE_STORAGE_LOG_DIR=/opt/calculate-storage/logs
 venv/bin/python3 calculate_storage.py $ISSUE_NUMBER

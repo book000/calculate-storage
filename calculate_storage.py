@@ -7,8 +7,31 @@ import psutil
 import requests
 import logging
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+def setup_logging():
+  log_dir = os.environ.get("CALCULATE_STORAGE_LOG_DIR", "/opt/calculate-storage/logs")
+  os.makedirs(log_dir, exist_ok=True)
+  log_filename = datetime.date.today().strftime("%Y-%m-%d.log")
+  log_path = os.path.join(log_dir, log_filename)
+
+  root_logger = logging.getLogger()
+  if root_logger.handlers:
+    return log_path
+
+  root_logger.setLevel(logging.DEBUG)
+  formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+  file_handler = logging.FileHandler(log_path, encoding="utf-8")
+  file_handler.setLevel(logging.DEBUG)
+  file_handler.setFormatter(formatter)
+
+  stream_handler = logging.StreamHandler()
+  stream_handler.setLevel(logging.INFO)
+  stream_handler.setFormatter(formatter)
+
+  root_logger.addHandler(file_handler)
+  root_logger.addHandler(stream_handler)
+
+  return log_path
 
 class GitHubIssue:
   body = None
@@ -192,6 +215,9 @@ def save_results(hostname, results):
       f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
 def main():
+  log_path = setup_logging()
+  logging.info(f"Logging to {log_path}")
+
   repo_name = "book000/book000"
   if os.environ.get("GITHUB_REPOSITORY") is not None:
     repo_name = os.environ["GITHUB_REPOSITORY"]
