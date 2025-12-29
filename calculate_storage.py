@@ -68,7 +68,10 @@ def setup_logging():
   root_logger.setLevel(logging.DEBUG)
   formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-  file_handler = logging.FileHandler(log_path, encoding="utf-8")
+  try:
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+  except OSError as e:
+    raise OSError(f"Failed to create log file: {log_path}: {e}") from e
   file_handler.name = "calculate-storage-file"
   file_handler.setLevel(logging.DEBUG)
   file_handler.setFormatter(formatter)
