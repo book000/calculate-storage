@@ -7,8 +7,84 @@ import psutil
 import requests
 import logging
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+def _get_default_log_dir():
+  if os.name == "nt":
+    user_profile = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    return os.path.join(user_profile, "calculate-storage", "logs")
+  return "/opt/calculate-storage/logs"
+
+def _find_handler(root_logger, name):
+  for handler in root_logger.handlers:
+    if getattr(handler, "name", None) == name:
+      return handler
+  return None
+
+
+def setup_logging():
+  log_dir = os.environ.get("CALCULATE_STORAGE_LOG_DIR", _get_default_log_dir())
+  try:
+    os.makedirs(log_dir, exist_ok=True)
+  except OSError as e:
+    raise OSError(f"Failed to create log directory: {log_dir}: {e}") from e
+  log_filename = datetime.date.today().strftime("%Y-%m-%d.log")
+  log_path = os.path.join(log_dir, log_filename)
+  log_path_abs = os.path.abspath(log_path)
+
+  root_logger = logging.getLogger()
+  file_handler = _find_handler(root_logger, "calculate-storage-file")
+  stream_handler = _find_handler(root_logger, "calculate-storage-stream")
+
+  if (
+    file_handler
+    and stream_handler
+    and getattr(file_handler, "baseFilename", None) == log_path_abs
+  ):
+    return log_path
+  if file_handler and getattr(file_handler, "baseFilename", None) == log_path_abs:
+    if not stream_handler:
+      for handler in list(root_logger.handlers):
+        if (
+          isinstance(handler, logging.StreamHandler)
+          and handler is not file_handler
+          and not isinstance(handler, logging.FileHandler)
+        ):
+          root_logger.removeHandler(handler)
+          handler.close()
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    stream_handler = logging.StreamHandler()
+    stream_handler.name = "calculate-storage-stream"
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(formatter)
+    root_logger.addHandler(stream_handler)
+    return log_path
+
+  if file_handler:
+    root_logger.removeHandler(file_handler)
+    file_handler.close()
+  if stream_handler:
+    root_logger.removeHandler(stream_handler)
+    stream_handler.close()
+
+  root_logger.setLevel(logging.DEBUG)
+  formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+
+  try:
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+  except OSError as e:
+    raise OSError(f"Failed to create log file: {log_path}: {e}") from e
+  file_handler.name = "calculate-storage-file"
+  file_handler.setLevel(logging.DEBUG)
+  file_handler.setFormatter(formatter)
+
+  stream_handler = logging.StreamHandler()
+  stream_handler.name = "calculate-storage-stream"
+  stream_handler.setLevel(logging.INFO)
+  stream_handler.setFormatter(formatter)
+
+  root_logger.addHandler(file_handler)
+  root_logger.addHandler(stream_handler)
+
+  return log_path
 
 class GitHubIssue:
   body = None
@@ -192,6 +268,9 @@ def save_results(hostname, results):
       f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
 def main():
+  log_path = setup_logging()
+  logging.info(f"Logging to {log_path}")
+
   repo_name = "book000/book000"
   if os.environ.get("GITHUB_REPOSITORY") is not None:
     repo_name = os.environ["GITHUB_REPOSITORY"]
