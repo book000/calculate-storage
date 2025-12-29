@@ -7,8 +7,15 @@ import psutil
 import requests
 import logging
 
+def _get_default_log_dir():
+  if os.name == "nt":
+    user_profile = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+    return os.path.join(user_profile, "calculate-storage", "logs")
+  return "/opt/calculate-storage/logs"
+
+
 def setup_logging():
-  log_dir = os.environ.get("CALCULATE_STORAGE_LOG_DIR", "/opt/calculate-storage/logs")
+  log_dir = os.environ.get("CALCULATE_STORAGE_LOG_DIR", _get_default_log_dir())
   os.makedirs(log_dir, exist_ok=True)
   log_filename = datetime.date.today().strftime("%Y-%m-%d.log")
   log_path = os.path.join(log_dir, log_filename)

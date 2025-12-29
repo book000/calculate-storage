@@ -22,6 +22,7 @@ $projectPath = Join-Path $userFolder "calculate-storage"
 
 New-Item -ItemType Directory -Force -Path $projectPath | Out-Null
 Set-Location -Path $projectPath -ErrorAction Stop
+$env:CALCULATE_STORAGE_LOG_DIR = Join-Path $projectPath "logs"
 
 # clone repository
 if (-not (Test-Path "$projectPath\.git")) {
