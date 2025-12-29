@@ -7,6 +7,12 @@ import platform
 import tempfile
 
 class TestCalculateStorage(unittest.TestCase):
+  def _cleanup_logging_handlers(self):
+    root_logger = calculate_storage.logging.getLogger()
+    for handler in list(root_logger.handlers):
+      root_logger.removeHandler(handler)
+      if hasattr(handler, "close"):
+        handler.close()
   @patch('calculate_storage.requests.get')
   @patch('calculate_storage.requests.patch')
   def test_github_issue_update(self, mock_patch, mock_get):
@@ -56,11 +62,7 @@ class TestCalculateStorage(unittest.TestCase):
       mock_issue_instance.update_storage_row.assert_called_once_with("TEST_COMPUTER", "C", mock_disk_usage.return_value)
       mock_issue_instance.update_issue_body.assert_called_once()
     finally:
-      root_logger = calculate_storage.logging.getLogger()
-      for handler in list(root_logger.handlers):
-        root_logger.removeHandler(handler)
-        if hasattr(handler, "close"):
-          handler.close()
+      self._cleanup_logging_handlers()
       tmpdir.cleanup()
 
   @patch('calculate_storage.is_valid_issue_number', return_value=False)
@@ -73,11 +75,7 @@ class TestCalculateStorage(unittest.TestCase):
             calculate_storage.main()
             self.assertTrue(any("Invalid issue number" in message for message in log.output))
     finally:
-      root_logger = calculate_storage.logging.getLogger()
-      for handler in list(root_logger.handlers):
-        root_logger.removeHandler(handler)
-        if hasattr(handler, "close"):
-          handler.close()
+      self._cleanup_logging_handlers()
       tmpdir.cleanup()
 
   @patch('calculate_storage.requests.get')
@@ -237,10 +235,19 @@ class TestCalculateStorage(unittest.TestCase):
           contents = f.read()
         self.assertIn("test log message", contents)
     finally:
-      for handler in list(root_logger.handlers):
-        root_logger.removeHandler(handler)
-        if hasattr(handler, "close"):
-          handler.close()
+      self._cleanup_logging_handlers()
+      tmpdir.cleanup()
+
+  @patch('calculate_storage.os.makedirs', side_effect=OSError("Permission denied"))
+  def test_setup_logging_directory_error(self, mock_makedirs):
+    tmpdir = tempfile.TemporaryDirectory()
+    try:
+      with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir.name}):
+        with self.assertRaises(OSError) as context:
+          calculate_storage.setup_logging()
+      self.assertIn("Failed to create log directory", str(context.exception))
+    finally:
+      self._cleanup_logging_handlers()
       tmpdir.cleanup()
 
   @patch('calculate_storage.get_github_token')
@@ -259,11 +266,7 @@ class TestCalculateStorage(unittest.TestCase):
               calculate_storage.main()
               mock_issue_instance.update_storage_row.assert_not_called()
     finally:
-      root_logger = calculate_storage.logging.getLogger()
-      for handler in list(root_logger.handlers):
-        root_logger.removeHandler(handler)
-        if hasattr(handler, "close"):
-          handler.close()
+      self._cleanup_logging_handlers()
       tmpdir.cleanup()
 
   @patch('calculate_storage.os.name', 'nt')
