@@ -54,6 +54,11 @@ class TestCalculateStorage(unittest.TestCase):
 
         mock_issue_instance.update_storage_row.assert_called_once_with("TEST_COMPUTER", "C", mock_disk_usage.return_value)
         mock_issue_instance.update_issue_body.assert_called_once()
+        root_logger = calculate_storage.logging.getLogger()
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
+            if hasattr(handler, "close"):
+                handler.close()
 
     @patch('calculate_storage.is_valid_issue_number', return_value=False)
     def test_main_invalid_issue_number(self, mock_is_valid_issue_number):
@@ -63,6 +68,11 @@ class TestCalculateStorage(unittest.TestCase):
                     with self.assertLogs(level='INFO') as log:
                         calculate_storage.main()
                         self.assertTrue(any("Invalid issue number" in message for message in log.output))
+        root_logger = calculate_storage.logging.getLogger()
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
+            if hasattr(handler, "close"):
+                handler.close()
 
     @patch('calculate_storage.requests.get')
     def test_get_issue_body(self, mock_get):
@@ -221,6 +231,10 @@ class TestCalculateStorage(unittest.TestCase):
                     contents = f.read()
                 self.assertIn("test log message", contents)
             finally:
+                for handler in list(root_logger.handlers):
+                    root_logger.removeHandler(handler)
+                    if hasattr(handler, "close"):
+                        handler.close()
                 os.environ.pop("CALCULATE_STORAGE_LOG_DIR", None)
 
     @patch('calculate_storage.get_github_token')
@@ -237,6 +251,11 @@ class TestCalculateStorage(unittest.TestCase):
 
                             calculate_storage.main()
                     mock_issue_instance.update_storage_row.assert_not_called()
+        root_logger = calculate_storage.logging.getLogger()
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
+            if hasattr(handler, "close"):
+                handler.close()
 
     @patch('calculate_storage.os.name', 'nt')
     @patch('calculate_storage.os.environ', {'COMPUTERNAME': 'TEST_WINDOWS'})
