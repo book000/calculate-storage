@@ -245,7 +245,7 @@ class TestCalculateStorage(unittest.TestCase):
       with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir.name}):
         with self.assertRaises(OSError) as context:
           calculate_storage.setup_logging()
-      self.assertIn("Failed to create log directory", str(context.exception))
+        self.assertIn("Failed to create log directory", str(context.exception))
     finally:
       self._cleanup_logging_handlers()
       tmpdir.cleanup()
