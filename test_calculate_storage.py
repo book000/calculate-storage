@@ -218,8 +218,7 @@ class TestCalculateStorage(unittest.TestCase):
             root_logger.removeHandler(handler)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            os.environ["CALCULATE_STORAGE_LOG_DIR"] = tmpdir
-            try:
+            with patch.dict(os.environ, {"CALCULATE_STORAGE_LOG_DIR": tmpdir}):
                 log_path = calculate_storage.setup_logging()
                 calculate_storage.logging.info("test log message")
                 for handler in root_logger.handlers:
@@ -230,12 +229,10 @@ class TestCalculateStorage(unittest.TestCase):
                 with open(log_path, "r", encoding="utf-8") as f:
                     contents = f.read()
                 self.assertIn("test log message", contents)
-            finally:
-                for handler in list(root_logger.handlers):
-                    root_logger.removeHandler(handler)
-                    if hasattr(handler, "close"):
-                        handler.close()
-                os.environ.pop("CALCULATE_STORAGE_LOG_DIR", None)
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
+            if hasattr(handler, "close"):
+                handler.close()
 
     @patch('calculate_storage.get_github_token')
     @patch('psutil.disk_usage', side_effect=OSError("Disk error"))
@@ -250,7 +247,7 @@ class TestCalculateStorage(unittest.TestCase):
                             mock_issue_instance.get_computer_drives.return_value = ["C"]
 
                             calculate_storage.main()
-                    mock_issue_instance.update_storage_row.assert_not_called()
+                            mock_issue_instance.update_storage_row.assert_not_called()
         root_logger = calculate_storage.logging.getLogger()
         for handler in list(root_logger.handlers):
             root_logger.removeHandler(handler)

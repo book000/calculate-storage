@@ -13,25 +13,47 @@ def _get_default_log_dir():
     return os.path.join(user_profile, "calculate-storage", "logs")
   return "/opt/calculate-storage/logs"
 
+def _find_handler(root_logger, name):
+  for handler in root_logger.handlers:
+    if getattr(handler, "name", None) == name:
+      return handler
+  return None
+
 
 def setup_logging():
   log_dir = os.environ.get("CALCULATE_STORAGE_LOG_DIR", _get_default_log_dir())
-  os.makedirs(log_dir, exist_ok=True)
+  try:
+    os.makedirs(log_dir, exist_ok=True)
+  except OSError as e:
+    raise OSError(f"Failed to create log directory: {log_dir}: {e}") from e
   log_filename = datetime.date.today().strftime("%Y-%m-%d.log")
   log_path = os.path.join(log_dir, log_filename)
+  log_path_abs = os.path.abspath(log_path)
 
   root_logger = logging.getLogger()
-  if root_logger.handlers:
+  file_handler = _find_handler(root_logger, "calculate-storage-file")
+  stream_handler = _find_handler(root_logger, "calculate-storage-stream")
+
+  if file_handler and getattr(file_handler, "baseFilename", None) == log_path_abs:
     return log_path
+
+  if file_handler:
+    root_logger.removeHandler(file_handler)
+    file_handler.close()
+  if stream_handler:
+    root_logger.removeHandler(stream_handler)
+    stream_handler.close()
 
   root_logger.setLevel(logging.DEBUG)
   formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
   file_handler = logging.FileHandler(log_path, encoding="utf-8")
+  file_handler.name = "calculate-storage-file"
   file_handler.setLevel(logging.DEBUG)
   file_handler.setFormatter(formatter)
 
   stream_handler = logging.StreamHandler()
+  stream_handler.name = "calculate-storage-stream"
   stream_handler.setLevel(logging.INFO)
   stream_handler.setFormatter(formatter)
 
