@@ -140,7 +140,7 @@ GitHub Issue (Markdown テーブル)
 
 ### 推奨パターン
 
-- **正規表現によるテーブル解析**: `re.compile(r'\| (.+) \| (.+) \| (.+) MB \| (.+) MB \| (.+)% \| (.+) \|')` でホスト行を解析
+- **行抽出用正規表現 + `|` 分割によるテーブル解析**: `row_regex` で `<!-- calculate-storage#computer_name#drive -->` を含む行だけを抽出し、Markdown 部分は `'|'` で split して各セルを解析する（`strip()` で前後の空白を除去）
 - **unittest.mock による外部依存のモック化**: GitHub API 通信や psutil の戻り値をモック化してテスト
 - **OS 判定**: `platform.system()` で Windows/Unix を判別し、適切なパス・ホスト名取得方法を選択
 - **ログ記録**: `logging` モジュールを使用し、日次ログファイルに記録
@@ -236,22 +236,19 @@ GitHub Issue (Markdown テーブル)
 
 - **`GITHUB_REPOSITORY`**: GitHub リポジトリ名（CI 実行時に自動設定）
 - **`CALCULATE_STORAGE_LOG_DIR`**: ログ出力ディレクトリ（未指定時は OS ごとのデフォルトパス）
-- **`ISSUE_NUMBER`**: GitHub Issue 番号（実行時引数で指定）
+- **`ISSUE_NUMBER`**: GitHub Issue 番号。アプリ本体は `sys.argv[1]` から実行時引数として取得し、CI／デプロイスクリプト側でこの環境変数をコマンドライン引数へ展開して渡す。
 
 ### GitHub Issue フォーマット
 
 GitHub Issue 本文は以下のような Markdown テーブル形式：
 
 ```markdown
-| Host | Drive | Used | Total | Usage | Status |
-|------|-------|------|-------|-------|--------|
-| hostname1 | C: | 100000 MB | 500000 MB | 20% | ✅ OK |
-| hostname2 | D: | 450000 MB | 500000 MB | 90% | 🔴 危険 |
+| ✅ | hostname1 | C: | 50% | 100 GB (SSD) | <!-- calculate-storage#hostname1#C -->
+| ✅ | hostname2 | D: | 90% | 500 GB (HDD) | <!-- calculate-storage#hostname2#D -->
 ```
 
-- 正規表現パターン: `\| (.+) \| (.+) \| (.+) MB \| (.+) MB \| (.+)% \| (.+) \|`
-- ホスト名が一致する行を更新、一致しない行はそのまま保持
-- 新しいホストの場合は行を追加
+- `<!-- calculate-storage#computer_name#drive -->` コメントが付与された行のうち、ホスト名が一致する行のみを更新
+- 一致する行がない場合は更新を行わず、一致しない既存行はそのまま保持され、新しいホスト用の行は自動追加されない
 
 ### ログファイル
 

@@ -76,10 +76,11 @@ AI エージェントは判断を必ずレビュー可能な形で記録する�
 
 ## セキュリティ / 機密情報
 
-- GitHub Personal Access Token などの認証情報は環境変数で管理し、コードに直接記述しない。
+- GitHub Personal Access Token などの認証情報はコードに直接記述しない（ハードコード禁止）。
+- 現行実装では GitHub Personal Access Token は `data/github_token.txt` から読み込む想定とし、`data/` ディレクトリは Git 管理から除外する。
 - 認証情報は Git にコミットしない。
 - ログに認証情報や個人情報を出力しない。
-- `.gitignore` で `data/` と `results/` ディレクトリを除外している（機密情報や一時ファイル用）。
+- `.gitignore` で `data/` と `results/` ディレクトリを除外している（機密情報や一時ファイル用）。将来的に環境変数での管理に切り替える場合は、コード実装とこのドキュメントの両方を更新すること。
 
 ## 開発コマンド
 
@@ -102,25 +103,24 @@ sudo bash calculate-storage.sh
 
 ## リポジトリ固有
 
-### 環境変数
+### 環境変数・実行時引数
 
 - **`GITHUB_REPOSITORY`**: GitHub リポジトリ名（CI 実行時に自動設定）
 - **`CALCULATE_STORAGE_LOG_DIR`**: ログ出力ディレクトリ（未指定時は OS ごとのデフォルトパス）
-- **`ISSUE_NUMBER`**: GitHub Issue 番号（実行時引数で指定）
+- **`ISSUE_NUMBER`**: GitHub Issue 番号  
+  - デプロイスクリプトで環境変数として設定され、アプリ本体には実行時引数（`sys.argv[1]`）として渡される
 
 ### GitHub Issue フォーマット
 
 GitHub Issue 本文は Markdown テーブル形式：
 
 ```markdown
-| Host | Drive | Used | Total | Usage | Status |
-|------|-------|------|-------|-------|--------|
-| hostname1 | C: | 100000 MB | 500000 MB | 20% | ✅ OK |
-| hostname2 | D: | 450000 MB | 500000 MB | 90% | 🔴 危険 |
+| ✅ | hostname1 | C: | 50% | 100 GB (SSD) | <!-- calculate-storage#hostname1#C -->
+| ✅ | hostname2 | D: | 90% | 500 GB (HDD) | <!-- calculate-storage#hostname2#D -->
 ```
 
-- 正規表現パターン: `\| (.+) \| (.+) \| (.+) MB \| (.+) MB \| (.+)% \| (.+) \|`
-- ホスト名が一致する行を更新、一致しない行はそのまま保持
+- Markdown テーブルの解析は `calculate_storage.py` の実装（例: 行 93, 194-205）に従い、`Used`/`Total` 列の単位（MB/GB など）には依存しない
+- HTML コメントに含まれる `computer_name` / `drive` の組み合わせをキーとして該当行を更新し、一致しない行はそのまま保持
 
 ### 主要クラスと関数
 

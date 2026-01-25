@@ -101,22 +101,19 @@ Gemini CLI は、以下の場合に相談を受けることがあります：
 
 - **`GITHUB_REPOSITORY`**: GitHub リポジトリ名（CI 実行時に自動設定）
 - **`CALCULATE_STORAGE_LOG_DIR`**: ログ出力ディレクトリ（未指定時は OS ごとのデフォルトパス）
-- **`ISSUE_NUMBER`**: GitHub Issue 番号（実行時引数で指定）
+- **`ISSUE_NUMBER`**: GitHub Issue 番号。Python 本体（`calculate_storage.py`）は `sys.argv[1]` で Issue 番号を受け取る。CI / デプロイスクリプト（例: `calculate-storage.sh` / `calculate-storage.ps1`）は、この環境変数 `ISSUE_NUMBER` を CLI 引数に展開して `calculate_storage.py` に渡す。
 
 ### GitHub Issue フォーマット
 
 GitHub Issue 本文は Markdown テーブル形式：
 
 ```markdown
-| Host | Drive | Used | Total | Usage | Status |
-|------|-------|------|-------|-------|--------|
-| hostname1 | C: | 100000 MB | 500000 MB | 20% | ✅ OK |
-| hostname2 | D: | 450000 MB | 500000 MB | 90% | 🔴 危険 |
+| ✅ | hostname1 | C: | 50% | 100 GB (SSD) | <!-- calculate-storage#hostname1#C -->
+| ✅ | hostname2 | D: | 90% | 500 GB (HDD) | <!-- calculate-storage#hostname2#D -->
 ```
 
-- 正規表現パターン: `\| (.+) \| (.+) \| (.+) MB \| (.+) MB \| (.+)% \| (.+) \|`
-- ホスト名が一致する行を更新、一致しない行はそのまま保持
-- 新しいホストの場合は行を追加
+- `<!-- calculate-storage#computer_name#drive -->` コメントが付与された行のうち、ホスト名が一致する行のみを更新
+- 一致する行がない場合は更新を行わず、一致しない既存行はそのまま保持され、新しいホスト用の行は自動追加されない
 
 ### 主要クラス
 

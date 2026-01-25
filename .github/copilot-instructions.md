@@ -75,10 +75,11 @@ sudo bash calculate-storage.sh
 
 ## セキュリティ / 機密情報
 
-- GitHub Personal Access Token などの認証情報は環境変数で管理し、コードに直接記述しない。
+- GitHub Personal Access Token などの認証情報はコードに直接記述しない（ハードコード禁止）。
+- 現行実装では GitHub Personal Access Token は `data/github_token.txt` から読み込む想定とし、`data/` ディレクトリは Git 管理から除外する。
 - 認証情報は Git にコミットしない。
 - ログに認証情報や個人情報を出力しない。
-- `.gitignore` で `data/` と `results/` ディレクトリを除外している（機密情報や一時ファイル用）。
+- `.gitignore` で `data/` と `results/` ディレクトリを除外している（機密情報や一時ファイル用）。将来的に環境変数での管理に切り替える場合は、コード実装とこのドキュメントの両方を更新すること。
 
 ## ドキュメント更新
 
@@ -93,10 +94,10 @@ sudo bash calculate-storage.sh
 - **環境変数**:
   - `GITHUB_REPOSITORY`: GitHub リポジトリ名（CI 実行時に自動設定）
   - `CALCULATE_STORAGE_LOG_DIR`: ログ出力ディレクトリ（未指定時は OS ごとのデフォルトパス）
-  - `ISSUE_NUMBER`: GitHub Issue 番号（実行時引数で指定）
+  - `ISSUE_NUMBER`: GitHub Issue 番号。デプロイスクリプトで環境変数として設定し、アプリ本体にはコマンドライン引数（`sys.argv[1]`）として渡される。
 - **GitHub Issue フォーマット**:
-  - Markdown テーブル形式で複数ホストのディスク情報を管理
-  - 正規表現で行を解析・更新（パターン: `\| (.+) \| (.+) \| (.+) MB \| (.+) MB \| (.+)% \| (.+) \|`）
+  - `<!-- calculate-storage#<computer_name>#<drive> -->` コメントが付いた行のみを自動更新対象とする
+  - 行の Markdown 部分は `|` で split して解析・更新し、容量は MB 単位で表示する
 - **ログファイル**: 日次ログを `YYYY-MM-DD.log` 形式で出力
 - **デプロイスクリプト**: Linux は bash、Windows は PowerShell で自動デプロイ可能
 - **Renovate**: 依存パッケージ更新は自動 PR で管理
