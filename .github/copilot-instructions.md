@@ -1,102 +1,28 @@
-# GitHub Copilot Instructions
+# GitHub Copilot コードレビュー指示
 
-## プロジェクト概要
+calculate-storage は、GitHub Issue の Markdown テーブルを複数マシンのディスク使用量ダッシュボードとして更新する Python ツール（単一ファイル `calculate_storage.py`）です。以下の観点でレビューしてください。
 
-- **目的**: GitHub Issues を利用したディスク容量監視システム
-- **主な機能**:
-  - ローカルディスクの使用量を取得（psutil 使用）
-  - GitHub API 経由で Issue の読み取り・更新
-  - ディスク使用率に基づく視覚的インジケータ（✅ / 🔴）
-  - 複数ドライブ対応（Windows/Unix 両対応）
-  - 日次ログファイルの自動生成
-- **対象ユーザー**: 複数コンピュータのディスク使用状況を集中管理したい開発者・システム管理者
+## 強制されている規約
 
-## 共通ルール
+- コメント・docstring・レビューコメントは日本語。エラーメッセージ / ログメッセージは英語。
+- 日本語と英数字の間には半角スペースを入れる。これが欠けている箇所は指摘してよい。
+- インデントはスペース 2 個（Python も 2）。改行 LF、UTF-8、末尾改行あり（`.editorconfig`）。逸脱を指摘する。
+- 命名: クラス PascalCase、関数・変数 snake_case、定数 UPPER_SNAKE_CASE。
+- 公開関数・クラスには日本語 docstring を求める。
+- コミットは Conventional Commits（description は日本語）。
 
-- 会話は日本語で行う。
-- コミットメッセージは [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) に従う。`<description>` は日本語で記載する。
-  - 例: `feat: ユーザー認証機能を追加`
-- ブランチ命名は [Conventional Branch](https://conventional-branch.github.io) に従う。`<type>` は短縮形（feat, fix）を使用する。
-  - 例: `feat/add-user-auth`
-- 日本語と英数字の間には半角スペースを挿入する。
+## 重点的に確認すべき点
 
-## 技術スタック
+- **Issue 本文の破壊的更新**: 行は `<!-- calculate-storage#computer_name#drive -->` マーカーで識別する。マーカーの無い行（`row_regex` 不一致）は必ずそのまま保持すること。この非マーカー行の保持を壊す変更（無条件の行削除・並べ替え・マーカー欠落）は重大な指摘対象。なお現行実装では、マーカー付きでも 7 要素分割やサイズ形式の解析に失敗した行は `update_issue_body()` の再構成時に脱落する。この解析条件を不用意に厳しくして既存行を巻き込む変更にも注意する。
+- **正規表現の整合性**: 行検出 `(?P<markdown>.*) <!-- calculate-storage#(?P<computer_name>.+)#(?P<drive>.+) -->` とサイズ `^(?P<size>[0-9.]+ [TGMK]B) \((?P<drive_type>.+)\)$` を変える場合、双方向（解析と再生成）の整合が取れているか確認する。
+- **認証情報**: トークンは `data/github_token.txt` から読む。トークンや Issue 本文をログ・例外メッセージ・コミットに露出させていないか。`data/` `results/` 配下をコミットに含めていないか。
+- **エラーハンドリング**: GitHub API 呼び出し（非 200 応答）、`psutil.disk_usage` の `OSError`、ログ/結果ディレクトリ作成失敗が握り潰されず適切に処理・記録されているか。
+- **OS 依存処理**: ホスト名取得やパスなど OS 分岐（`os.name`）が Windows/Unix 双方で成立するか。片側のみで壊れる変更を指摘する。
+- **テスト**: ロジック変更に対応する unittest があるか。GitHub API・psutil などの外部依存は `unittest.mock` でモック化されているか（実ネットワーク通信を伴うテストは指摘対象）。CI は Python 3.9〜3.13 マトリックスのため、新しい構文/API が 3.9 で動くか確認する。
 
-- **言語**: Python 3 (3.9, 3.10, 3.11, 3.12, 3.13, 3.x でテスト)
-- **主要ライブラリ**:
-  - psutil 7.2.1 - ディスク使用量取得
-  - requests 2.32.5 - GitHub API 通信
-- **テストフレームワーク**: unittest (Python 標準ライブラリ)
-- **パッケージマネージャー**: pip
-- **CI/CD**: GitHub Actions（Ubuntu/Windows マトリックステスト）
+## 誤検知しやすい（フラグ不要な）パターン
 
-## コーディング規約
-
-- **インデント**: スペース 2 個（`.editorconfig` で定義）
-- **改行コード**: LF
-- **エンコーディング**: UTF-8
-- **命名規則**:
-  - クラス: PascalCase（例: `GitHubIssue`）
-  - 関数・変数: snake_case（例: `get_disk_usage`）
-  - 定数: UPPER_SNAKE_CASE（例: `DEFAULT_LOG_DIR`）
-- **コメント**: 日本語で記載
-- **エラーメッセージ**: 英語で記載
-- **docstring**: 日本語で記載（関数・クラスに必須）
-
-## 開発コマンド
-
-```bash
-# 依存関係のインストール
-pip install -r requirements.txt
-
-# メインアプリケーション実行
-python calculate_storage.py <ISSUE_NUMBER>
-
-# テスト実行
-python -m unittest discover -s . -p "test_*.py"
-
-# デプロイ（Linux/Unix）
-sudo bash calculate-storage.sh
-
-# デプロイ（Windows PowerShell）
-.\calculate-storage.ps1
-```
-
-## テスト方針
-
-- **テストフレームワーク**: unittest
-- **テストファイル**: `test_calculate_storage.py`
-- **モック**: `unittest.mock` を使用してネットワーク通信や外部依存をモック化
-- **テスト追加の方針**:
-  - 新機能追加時は対応するユニットテストを必ず追加
-  - GitHub API 通信部分は必ずモック化
-  - Windows/Unix 両対応が必要な機能は OS 別にテスト
-  - エラーハンドリングのテストも含める
-
-## セキュリティ / 機密情報
-
-- GitHub Personal Access Token などの認証情報は環境変数で管理し、コードに直接記述しない。
-- 認証情報は Git にコミットしない。
-- ログに認証情報や個人情報を出力しない。
-- `.gitignore` で `data/` と `results/` ディレクトリを除外している（機密情報や一時ファイル用）。
-
-## ドキュメント更新
-
-以下のファイルは機能追加・変更時に更新すること：
-
-- **requirements.txt**: 依存パッケージ追加・更新時
-- **test_calculate_storage.py**: テストケース追加時
-- **このファイル（.github/copilot-instructions.md）**: 開発手順やルールの変更時
-
-## リポジトリ固有
-
-- **環境変数**:
-  - `GITHUB_REPOSITORY`: GitHub リポジトリ名（CI 実行時に自動設定）
-  - `CALCULATE_STORAGE_LOG_DIR`: ログ出力ディレクトリ（未指定時は OS ごとのデフォルトパス）
-  - `ISSUE_NUMBER`: GitHub Issue 番号（実行時引数で指定）
-- **GitHub Issue フォーマット**:
-  - Markdown テーブル形式で複数ホストのディスク情報を管理
-  - 正規表現で行を解析・更新（パターン: `\| (.+) \| (.+) \| (.+) MB \| (.+) MB \| (.+)% \| (.+) \|`）
-- **ログファイル**: 日次ログを `YYYY-MM-DD.log` 形式で出力
-- **デプロイスクリプト**: Linux は bash、Windows は PowerShell で自動デプロイ可能
-- **Renovate**: 依存パッケージ更新は自動 PR で管理
+- インデントが 2 スペースなのは仕様（PEP 8 の 4 スペースからの逸脱を指摘しない）。
+- `data/github_token.txt` からのトークン読み込みは意図的な設計。「環境変数を使え」という一般論は不要。
+- `GitHubIssue` の名前二重アンダースコアメソッド（`__get_issue_body` 等）は意図的な非公開メソッド。
+- 結果ファイルの拡張子が `.txt` で中身が JSON Lines なのは既存仕様。
