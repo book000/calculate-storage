@@ -64,12 +64,14 @@ CI（`.github/workflows/ci.yml`）は Ubuntu/Windows × Python 3.9〜3.13/3.x �
 管理対象の行は「Markdown テーブル行 + 末尾の HTML コメントマーカー」で表現されます。マーカーでホスト・ドライブを識別するため、テーブルの表示列だけでは判別しません。
 
 ```
-| ✅ | hostname1 | C: | 1.20 TB (75.0%) | 1.60 TB (SSD) | <!-- calculate-storage#hostname1#C: -->
+| ✅ | hostname1 | C: | 1.20 TB (75.0%) | 1.60 TB (SSD) | <!-- calculate-storage#hostname1#C -->
 ```
 
 - 行検出の正規表現: `(?P<markdown>.*) <!-- calculate-storage#(?P<computer_name>.+)#(?P<drive>.+) -->`
 - サイズ列の正規表現: `^(?P<size>[0-9.]+ [TGMK]B) \((?P<drive_type>.+)\)$`（例: `1.60 TB (SSD)`）
-- テーブル部分を `|` で分割すると 7 要素（チェックマーク / computer_name / drive / used / size）になる前提。マーカーの無い行や形式が合わない行はそのまま保持する。
+- **マーカー側の `drive` と表示列の `drive` は別物**。マーカーの `drive` 値は `psutil.disk_usage(drive)` に渡される実際の値で、表示列とは異なりうる（上例ではマーカーが `C`、表示列が `C:`。テストも同様: `test_calculate_storage.py`）。
+- テーブル部分を `|` で分割すると 7 要素（チェックマーク / computer_name / drive / used / size）になる前提。
+- **行の保持挙動（現行実装）**: マーカーの無い行（`row_regex` 不一致）は `update_issue_body()` でそのまま保持される。一方、マーカー付きでも 7 要素に分割できない・サイズ形式が不正な行は `__get_storage_rows()` で `storage_rows` に載らず、`update_issue_body()` の再構成時に**脱落する**。破壊的更新を避けたい場合はマーカー行の形式を厳密に保つこと。
 
 ## 認証情報とデータ
 
