@@ -25,7 +25,7 @@ sudo bash calculate-storage.sh
 .\calculate-storage.ps1
 ```
 
-CI（`.github/workflows/ci.yml`）は Ubuntu/Windows × Python 3.9〜3.13/3.x のマトリックスで上記テストコマンドを実行します。
+CI（`.github/workflows/ci.yml`）は Ubuntu/Windows × Python 3.10〜3.13/3.x のマトリックスで上記テストコマンドを実行します（`requests` が 2.33.0 以降で Python 3.9 サポートを終了したため、Python 3.9 は対象外）。
 
 ## コーディング規約
 
@@ -43,7 +43,7 @@ CI（`.github/workflows/ci.yml`）は Ubuntu/Windows × Python 3.9〜3.13/3.x �
 |---------|------|
 | `calculate_storage.py` | メインアプリケーション（単一ファイル、約 326 行） |
 | `test_calculate_storage.py` | unittest ベースのユニットテスト |
-| `requirements.txt` | 依存パッケージ（`psutil==7.2.2`, `requests==2.32.5`） |
+| `requirements.txt` | 依存パッケージ（`psutil==7.2.2`, `requests==2.34.2`） |
 | `calculate-storage.sh` / `.ps1` | Linux/Windows デプロイスクリプト |
 | `.github/workflows/ci.yml` | CI 設定 |
 | `.github/copilot-instructions.md` | GitHub Copilot コードレビュー用の指示 |
