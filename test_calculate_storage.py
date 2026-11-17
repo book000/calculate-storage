@@ -493,5 +493,40 @@ class TestCalculateStorage(unittest.TestCase):
       f"{added}"
     )
 
+  def test_update_issue_body_keeps_existing_other_host_row_changed_after_fetch(self):  # noqa: E111,E501
+    local = "| 🔴 | HOST | C | 99% | 1 GB (SSD) | <!-- calculate-storage#HOST#C -->"  # noqa: E501
+    old = "| ✅ | OTHER | E | 20% | 100 GB (HDD) | <!-- calculate-storage#OTHER#E -->"  # noqa: E501
+    fresh = "| ✅ | OTHER | E | 80% | 100 GB (HDD) | <!-- calculate-storage#OTHER#E -->"  # noqa: E501
+
+    patched = self._update_and_get_patched_body([f"{local}\n{old}", f"{local}\n{fresh}"])  # noqa: E501
+
+    self.assertEqual(
+      patched,
+      "| ✅ | HOST | C | 50.00 GB (50%) | 100.00 GB (SSD) | <!-- calculate-storage#HOST#C -->\n"  # noqa: E501
+      f"{fresh}"
+    )
+
+  def test_only_successful_updates_are_merged_and_cleared_after_patch(self):  # noqa: E111,E501
+    first = "| ✅ | HOST | C | 20% | 100 GB (SSD) | <!-- calculate-storage#HOST#C -->"  # noqa: E501
+    second = "| ✅ | HOST | D | 20% | 100 GB (HDD) | <!-- calculate-storage#HOST#D -->"  # noqa: E501
+    fresh_first = first.replace("20%", "80%")
+    body = f"{first}\n{second}"
+    usage = DiskUsage(total=100 * 1024**3, used=50 * 1024**3, free=50 * 1024**3, percent=50)  # noqa: E501
+
+    with patch.object(calculate_storage.GitHubIssue, '_GitHubIssue__get_issue_body',  # noqa: E501
+                      side_effect=[body, body, f"{fresh_first}\n{second}"]), \
+         patch('calculate_storage.requests.patch') as mock_patch:
+      mock_patch.return_value.status_code = 200  # noqa: E111
+      issue = calculate_storage.GitHubIssue("test_repo", 1, "test_token")  # noqa: E111,E501
+      self.assertTrue(issue.update_storage_row("HOST", "C", usage))  # noqa: E111,E501
+      self.assertTrue(issue.update_storage_row("HOST", "D", usage))  # noqa: E111,E501
+      self.assertFalse(issue.update_storage_row("HOST", "E", usage))  # noqa: E111,E501
+      issue.update_issue_body()  # noqa: E111
+      patched = mock_patch.call_args.kwargs["json"]["body"]  # noqa: E111
+      self.assertIn("50.00 GB (50%) | 100.00 GB (SSD)", patched)  # noqa: E111
+      self.assertIn("50.00 GB (50%) | 100.00 GB (HDD)", patched)  # noqa: E111
+      issue.update_issue_body()  # noqa: E111
+      self.assertEqual(mock_patch.call_args.kwargs["json"]["body"], f"{fresh_first}\n{second}")  # noqa: E111,E501
+
 if __name__ == "__main__":
   unittest.main()

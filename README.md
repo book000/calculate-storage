@@ -47,7 +47,7 @@ The log directory must be writable: with the default on Unix you need write acce
 
 ### Output
 
-- Issue: the matching rows of the Issue body are updated through `PATCH /repos/{repo}/issues/{number}`. The body is fetched again just before writing to reduce conflicts with other hosts.
+- Issue: the successfully measured rows of the Issue body are updated through `PATCH /repos/{repo}/issues/{number}`. The body is fetched again just before writing to preserve other rows, but changes made between that fetch and the PATCH can still be overwritten.
 - Log: `YYYY-MM-DD.log` in the log directory (DEBUG level; the console shows INFO and above).
 - Results: `results/<hostname>_<YYYYMMDD>.txt` in the working directory, one JSON object per line (JSON Lines despite the `.txt` extension) with `drive`, `used`, `total`, `percent`, `used_size`, `total_size` and `update_result`.
 

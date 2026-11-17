@@ -110,6 +110,7 @@ class GitHubIssue:
 
     self.body = self.__get_issue_body()
     self.storage_rows = self.__get_storage_rows()
+    self.dirty_rows = set()
 
   def update_storage_row(self, computer_name, drive, usage):
     used_size = self.get_human_readable_size(usage.used)
@@ -127,6 +128,7 @@ class GitHubIssue:
         storage_row["markdown"]["size"] = total_size
         storage_row["markdown"]["raw"] = f"| {storage_row['markdown']['checkmark']} | {storage_row['markdown']['computer_name']} | {storage_row['markdown']['drive']} | {storage_row['markdown']['used']} | {storage_row['markdown']['size']} ({storage_row['markdown']['drive_type']}) |"
 
+        self.dirty_rows.add((computer_name, drive))
         return True
 
     return False
@@ -139,8 +141,6 @@ class GitHubIssue:
     return computer_drives
 
   def update_issue_body(self):
-    # Re-fetch right before writing so concurrent edits by other hosts are not overwritten.
-    # storage_rows is not re-parsed: it already holds this run's updates.
     self.body = self.__get_issue_body()
 
     rows = self.body.split("\n")
@@ -153,6 +153,9 @@ class GitHubIssue:
 
       computer_name = m.group("computer_name")
       drive = m.group("drive")
+      if (computer_name, drive) not in self.dirty_rows:  # noqa: E111
+        new_rows.append(row)
+        continue
       for storage_row in self.storage_rows:
         if storage_row["computer_name"] == computer_name and storage_row["drive"] == drive:
           new_rows.append(storage_row["markdown"]["raw"] + f" <!-- calculate-storage#{computer_name}#{drive} -->")
@@ -179,6 +182,7 @@ class GitHubIssue:
     if response.status_code != 200:
       raise Exception(f"Failed to update issue body: {response.text}")
 
+    self.dirty_rows.clear()
     return True
 
   def __get_issue_body(self):
