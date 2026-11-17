@@ -27,16 +27,29 @@ $env:CALCULATE_STORAGE_LOG_DIR = Join-Path $projectPath "logs"
 # clone repository
 if (-not (Test-Path "$projectPath\.git")) {
   git clone https://github.com/book000/calculate-storage.git .
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
 }
 else {
   git pull
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
 }
 
 # create venv and install requirements
 if (-not (Test-Path "$projectPath\venv")) {
   python3 -m venv venv
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
 }
 
 .\venv\Scripts\pip install -r requirements.txt
+if ($LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}
 
 .\venv\Scripts\python calculate_storage.py $env:ISSUE_NUMBER
+exit $LASTEXITCODE
